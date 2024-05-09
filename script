@@ -1,0 +1,202 @@
+#!/bin/bash
+
+# Funzione per la gestione degli utenti
+gestisci_utenti() {
+    echo "1. Crea un nuovo utente"
+    echo "2. Rimuovi un utente esistente"
+    echo "3. Modifica il nome di un utente esistente"
+    echo "4. Imposta la password di un utente"
+    echo "5. Elenco degli utenti"
+    echo "6. Esegui il backup degli utenti"
+    echo "7. Conta il numero di file log di un sistema"
+    read -p "Seleziona un'opzione: " opzione_utente
+
+    case $opzione_utente in
+        1)
+            read -p "Inserisci il nome del nuovo utente: " nuovo_utente
+            sudo useradd $nuovo_utente
+            read -p "Inserisci la password per il nuovo utente: " password_utente
+            echo "$nuovo_utente:$password_utente" | sudo chpasswd
+            ;;
+        2)
+            read -p "Inserisci il nome dell'utente da rimuovere: " utente_da_rimuovere
+            sudo userdel $utente_da_rimuovere
+            ;;
+        3)
+            read -p "Inserisci il nome dell'utente da modificare: " nome_utente
+            read -p "Inserisci il nuovo nome per l'utente: " nuovo_nome_utente
+            sudo usermod -l $nuovo_nome_utente $nome_utente
+            ;;
+        4)
+            read -p "Inserisci il nome dell'utente a cui impostare la password: " utente_da_modificare
+            read -p "Inserisci la nuova password per l'utente: " nuova_password
+            echo "$utente_da_modificare:$nuova_password" | sudo chpasswd
+            ;;
+        5)
+            echo "Elenco degli utenti:"
+            cut -d: -f1 /etc/passwd
+            ;;
+        6)
+            read -p "Inserisci il percorso completo della directory per salvare il backup: " percorso_backup
+            echo "Esecuzione del backup degli utenti..."
+            sudo tar -czvf $percorso_backup/utenti_backup_$(date +%Y%m%d%H%M%S).tar.gz /home
+            echo "Backup degli utenti completato."
+            ;;
+        7)
+            echo "Conteggio dei file di log del sistema..."
+            sudo find /var/log -type f | wc -l
+            ;;
+        *)
+            echo "Opzione non valida."
+            ;;
+    esac
+}
+
+
+
+# Funzione per la gestione dei demoni (servizi)
+gestisci_demoni() {
+    echo "1. Avvia un demone"
+    echo "2. Arresta un demone"
+    echo "3. Verifica lo stato di un demone"
+    read -p "Seleziona un'opzione: " opzione_demone
+
+    case $opzione_demone in
+        1)
+            read -p "Inserisci il nome del demone da avviare (es. apache2): " nome_demone
+            sudo service $nome_demone start
+            ;;
+        2)
+            read -p "Inserisci il nome del demone da arrestare (es. apache2): " nome_demone
+            sudo service $nome_demone stop
+            ;;
+        3)
+            read -p "Inserisci il nome del demone da verificare (es. apache2): " nome_demone
+            sudo service $nome_demone status
+            ;;
+        *)
+            echo "Opzione non valida."
+            ;;
+    esac
+}
+
+# Funzione per la gestione del file system
+gestisci_file_system() {
+    echo "1. Creare una nuova directory"
+    echo "2. Rimuovere una directory o un file"
+    echo "3. Modificare i permessi di accesso"
+    echo "4. Elenco del contenuto di una directory"
+    echo "5. Fare backup della home"
+    read -p "Seleziona un'opzione: " opzione_file_system
+
+    case $opzione_file_system in
+        1)
+            read -p "Inserisci il percorso completo della nuova directory: " nuovo_percorso
+            sudo mkdir -p $nuovo_percorso
+            ;;
+        2)
+            read -p "Inserisci il percorso completo della directory o del file da rimuovere: " percorso_da_rimuovere
+            sudo rm -rf $percorso_da_rimuovere
+            ;;
+        3)
+            read -p "Inserisci il percorso completo della directory o del file: " percorso_permessi
+            read -p "Inserisci i nuovi permessi (es. 755): " nuovi_permessi
+            sudo chmod $nuovi_permessi $percorso_permessi
+            ;;
+        4)
+            read -p "Inserisci il percorso completo della directory da elencare: " percorso_elenco
+            ls -l $percorso_elenco
+            ;;
+        5)
+            fare_backup_home
+            ;;
+        *)
+            echo "Opzione non valida."
+            ;;
+    esac
+}
+
+# Funzione per la gestione della rete
+gestisci_rete() {
+    echo "1. Configurare un indirizzo IP"
+    echo "2. Stampa l'indirizzo IP attuale"
+    echo "3. Configurare un gateway predefinito"
+    echo "4. Verificare lo stato della connessione di rete"
+    echo "5. Eseguire il ping verso un host"
+    read -p "Seleziona un'opzione: " opzione_rete
+
+    case $opzione_rete in
+        1)
+            read -p "Inserisci l'indirizzo IP: " ip_address
+            # Verifica se l'indirizzo IP è già assegnato
+            if ip addr show | grep -q $ip_address; then
+                echo "L'indirizzo IP $ip_address è già assegnato a un'interfaccia di rete."
+                echo "Errore durante la configurazione dell'indirizzo IP."
+            else
+                if sudo ip addr add $ip_address dev eth0; then
+                    echo "Indirizzo IP configurato con successo."
+                else
+                    echo "Errore durante la configurazione dell'indirizzo IP."
+                fi
+            fi
+            ;;
+        2)
+            indirizzo_ip=$(hostname -I)
+            echo "Indirizzo IP attuale: $indirizzo_ip"
+            ;;
+        3)
+            read -p "Inserisci l'indirizzo IP del gateway predefinito: " gateway_ip
+            sudo ip route add default via $gateway_ip
+            echo "Gateway predefinito configurato con successo."
+            ;;
+        4)
+            ping -c 3 www.google.com
+            ;;
+        5)
+            read -p "Inserisci l'indirizzo IP o il nome host da pingare: " host_to_ping
+            ping -c 3 $host_to_ping
+            ;;
+        *)
+            echo "Opzione non valida."
+            ;;
+    esac
+}
+
+# Funzione per eseguire il backup della home
+fare_backup_home() {
+    read -p "Inserisci il percorso completo della directory home da fare il backup: " percorso_home
+    read -p "Inserisci il percorso completo di destinazione del backup: " percorso_backup
+    tar -cvzf $percorso_backup/home_backup.tar.gz $percorso_home
+}
+
+# Menu principale
+while true; do
+    echo "1. Gestione degli utenti"
+    echo "2. Gestione dei demoni (servizi)"
+    echo "3. Gestione del file system"
+    echo "4. Gestione della rete"
+    echo "5. Esci"
+    read -p "Seleziona un'opzione: " opzione
+
+    case $opzione in
+        1)
+            gestisci_utenti
+            ;;
+        2)
+            gestisci_demoni
+            ;;
+        3)
+            gestisci_file_system
+            ;;
+        4)
+            gestisci_rete
+            ;;
+        5)
+            echo "Uscita dal programma."
+            exit 0
+            ;;
+        *)
+            echo "Opzione non valida."
+            ;;
+    esac
+done
